@@ -1,0 +1,43 @@
+# Model settings
+model:
+  vehicle_detector:
+    weights: models/vehicle_detector.pt
+    confidence: 0.5
+    iou_threshold: 0.45
+    device: cpu            # "cpu" or "cuda"
+    classes:               # COCO class ids to keep (cars, trucks, motorcycles, buses)
+      - 2   # car
+      - 3   # motorcycle
+      - 5   # bus
+      - 7   # truck
+
+  plate_reader:
+    confidence: 0.6
+    ocr_language: tr       # Turkish plates
+
+  driver_analyzer:
+    confidence: 0.5
+    behaviors:
+      - phone_usage
+      - smoking
+      - drowsiness
+      - seatbelt_violation
+
+# Frame extraction
+video:
+  frame_interval: 1        # Extract one frame every N seconds
+  max_frames: null         # null = no limit
+
+# Paths
+paths:
+  raw_video_dir: data/raw
+  frames_dir: data/frames
+  labels_dir: data/labels
+  models_dir: models
+  outputs_dir: outputs
+
+# Logging
+logging:
+  log_dir: outputs/logs
+  log_file: detections.json
+  level: INFO
