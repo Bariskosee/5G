@@ -1,0 +1,44 @@
+# Dataset files (competition data – do NOT commit)
+data/raw/
+data/frames/
+data/labels/
+
+# Model weights
+models/*.pt
+models/*.pth
+models/*.onnx
+
+# Detection outputs
+outputs/
+
+# Video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.ipynb_checkpoints/
+
+# Virtual environments
+.env
+.venv
+venv/
+env/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
