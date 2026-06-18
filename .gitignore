@@ -55,3 +55,20 @@ Thumbs.db
 
 # Keep .gitkeep files trackable
 !**/.gitkeep
+
+# Generated dataset artifacts
+/datasets/raw/**
+/datasets/samples/**
+/datasets/processed/**
+
+# Keep dataset placeholder directories
+!/datasets/raw/
+!/datasets/raw/.gitkeep
+!/datasets/samples/
+!/datasets/samples/.gitkeep
+!/datasets/processed/
+!/datasets/processed/.gitkeep
+!/datasets/processed/model_a_unified/
+!/datasets/processed/model_a_unified/.gitkeep
+!/datasets/processed/model_b_plate/
+!/datasets/processed/model_b_plate/.gitkeep
