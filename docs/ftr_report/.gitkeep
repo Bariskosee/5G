@@ -1,0 +1,13 @@
+# Dataset files should not be committed
+datasets/raw/*
+datasets/samples/*
+datasets/processed/*
+
+# Keep placeholder files
+!datasets/raw/.gitkeep
+!datasets/samples/.gitkeep
+!datasets/processed/.gitkeep
+!datasets/processed/model_a_unified/
+!datasets/processed/model_a_unified/.gitkeep
+!datasets/processed/model_b_plate/
+!datasets/processed/model_b_plate/.gitkeep
