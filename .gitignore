@@ -72,3 +72,12 @@ Thumbs.db
 !/datasets/processed/model_a_unified/.gitkeep
 !/datasets/processed/model_b_plate/
 !/datasets/processed/model_b_plate/.gitkeep
+
+# Training outputs and model artifacts
+runs/
+*.zip
+yolov8*.pt
+models/**/*.pt
+
+# Keep model folders without tracking weights
+!models/**/.gitkeep
