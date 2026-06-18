@@ -1,0 +1,17 @@
+# Template for remapping vehicle-type datasets into Model A classes.
+target_model: model_a_unified
+
+source_to_target:
+  sedan: sedan
+  car: sedan
+  suv: suv
+  sport_utility_vehicle: suv
+  hatchback: hatchback
+  pickup: pickup
+  pickup_truck: pickup
+  minibus: minibus
+  van: panelvan
+  panelvan: panelvan
+  panel_van: panelvan
+  truck: kamyon
+  kamyon: kamyon

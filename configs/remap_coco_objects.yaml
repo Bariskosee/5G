@@ -1,0 +1,10 @@
+# Template for remapping COCO-style object datasets into Model A classes.
+target_model: model_a_unified
+
+source_to_target:
+  person: person
+  cell phone: phone
+  mobile_phone: phone
+  bottle: drink
+  cup: drink
+  laptop: laptop

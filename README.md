@@ -67,6 +67,28 @@ pip install -e .
 
 ## Usage
 
+### Dataset Preparation Pipeline
+
+Audit a YOLO-format dataset before training:
+```bash
+python scripts/audit_yolo_dataset.py --data datasets/processed/model_b_plate/data.yaml
+```
+
+Print dataset statistics and low-count classes:
+```bash
+python scripts/dataset_stats.py --data datasets/processed/model_a_unified/data.yaml --min-count 100
+```
+
+Remap source YOLO classes into the project target classes:
+```bash
+python scripts/remap_yolo_labels.py --data datasets/raw/some_dataset/data.yaml --output datasets/processed/model_a_unified --mapping configs/remap_driver_behavior.yaml
+```
+
+Create a small inspection sample:
+```bash
+python scripts/sample_yolo_dataset.py --data datasets/raw/some_dataset/data.yaml --output datasets/samples/some_dataset --n 100
+```
+
 ### Validate a results JSON fixture
 ```bash
 python scripts/validate_results_json.py tests/fixtures/dummy_results.json

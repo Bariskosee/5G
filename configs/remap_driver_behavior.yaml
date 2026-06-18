@@ -1,0 +1,16 @@
+# Template for remapping driver-behavior datasets into Model A classes.
+target_model: model_a_unified
+
+source_to_target:
+  mobile_phone: phone
+  cell_phone: phone
+  phone: phone
+  smoking: cigarette
+  cigarette: cigarette
+  drink: drink
+  bottle: drink
+  cup: drink
+  no_belt: no_seatbelt
+  no_seatbelt: no_seatbelt
+  laptop: laptop
+  person: person
