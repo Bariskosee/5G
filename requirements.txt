@@ -1,6 +1,6 @@
-torch==2.1.2
-torchvision==0.16.2
-ultralytics==8.2.103
+torch==2.3.1
+torchvision==0.18.1
+ultralytics==8.4.70
 easyocr==1.7.2
 mediapipe==0.10.18
 opencv-python-headless==4.10.0.84

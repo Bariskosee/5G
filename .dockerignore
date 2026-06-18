@@ -1,0 +1,25 @@
+.git
+.venv
+venv
+env
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.DS_Store
+
+datasets
+data
+outputs
+runs
+reports
+notebooks
+
+*.zip
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Do not exclude models/. The local Docker build must include
+# models/model_b_plate/best.pt even though it is ignored by Git.

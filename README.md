@@ -67,6 +67,67 @@ pip install -e .
 
 ## Usage
 
+### Model B Plate Detector Status
+
+Model B is a trained YOLOv8s license plate detector integrated into the current FTR inference skeleton.
+
+- Weights: `models/model_b_plate/best.pt`
+- The weight file is local-only and ignored by Git.
+- Validation metrics: precision `0.984`, recall `0.958`, mAP50 `0.989`, mAP50-95 `0.851`
+- Test metrics: precision `0.973`, recall `0.971`, mAP50 `0.992`, mAP50-95 `0.851`
+
+This is not the final full competition solution yet. Vehicle type, vehicle color, driver actions, passengers, laptop, teknocan, and final OCR packaging are still pending.
+
+### FTR Inference Skeleton
+
+Run local inference with the trained plate detector:
+```bash
+python main.py \
+  --input path/to/video.mp4 \
+  --output outputs/results.json \
+  --plate-model models/model_b_plate/best.pt \
+  --frame-stride 10
+```
+
+If OCR is unavailable or EasyOCR model files are not packaged, inference continues and writes a schema-valid fallback plate value:
+
+```json
+"plaka": "tespit_edilemedi"
+```
+
+This fallback is temporary and is written with `confidence_score=0.01`.
+
+### Docker
+
+The FTR Docker defaults are:
+
+- Input video: `/app/data/input/video.mp4`
+- Output JSON: `/app/data/output/results.json`
+- Model weights: `/app/models/model_b_plate/best.pt`
+
+Build locally after confirming `models/model_b_plate/best.pt` exists:
+```bash
+docker build -t teknofest/5g-road-safety:latest .
+```
+
+Run with a local video mounted into the expected container path:
+```bash
+docker run --rm --gpus all \
+  -v "$PWD/sample_data/video.mp4:/app/data/input/video.mp4" \
+  -v "$PWD/outputs:/app/data/output" \
+  teknofest/5g-road-safety:latest
+```
+
+The Docker image installs CUDA 12.1 compatible PyTorch before Ultralytics. The `.dockerignore` intentionally does not exclude `models/`, so the local `best.pt` file is included in local Docker builds even though it is not committed to GitHub.
+
+TODO before final FTR packaging:
+
+- Package or replace OCR model files so no runtime download is needed.
+- Integrate Model A vehicle/object/person modules.
+- Add vehicle color inference.
+- Add driver action and passenger logic.
+- Clarify and prepare teknocan dataset coverage.
+
 ### Dataset Preparation Pipeline
 
 Audit a YOLO-format dataset before training:
