@@ -1,28 +1,24 @@
 # Data Directory
 
-This directory holds all dataset files used by the pipeline.
+This directory is reserved for local dataset files used during development.
 
 ## Structure
 
 ```
 data/
-├── raw/       ← Place competition video files here (*.mp4, *.avi, *.mov)
-├── frames/    ← Extracted frames will be saved here automatically
-└── labels/    ← Ground truth annotation files (JSON / YOLO .txt format)
+├── raw/       # Place competition video files here (*.mp4, *.avi, *.mov)
+├── frames/    # Optional local extracted frames
+└── labels/    # Optional local annotation files
 ```
 
 ## Notes
 
 - All subdirectories are **gitignored** to avoid committing large files.
 - Video files must follow the naming convention used in the competition dataset.
-- Label files should be in COCO JSON or YOLO annotation format.
+- Keep generated outputs under `outputs/`; keep committed test fixtures under `tests/fixtures/`.
 
-## Quick start
+## Validation
 
 ```bash
-# Copy your video files into data/raw/
-cp /path/to/competition/video.mp4 data/raw/
-
-# Extract frames (1 frame per second by default)
-python scripts/extract_frames.py --video data/raw/video.mp4 --output data/frames/video
+python scripts/validate_results_json.py tests/fixtures/dummy_results.json
 ```

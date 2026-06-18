@@ -1,0 +1,8 @@
+# Model B — YOLOv8s Plate Detector
+# Single-class detector. Plate TEXT is handled by EasyOCR + regex
+# normalization, NOT by YOLO classes.
+
+nc: 1
+
+names:
+  0: license_plate

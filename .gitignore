@@ -1,17 +1,25 @@
-# Dataset files (competition data – do NOT commit)
+# Datasets — images and labels are large and gitignored
+datasets/**/images/
+datasets/**/labels/
+
+# Legacy data folder (Phase 1)
 data/raw/
 data/frames/
 data/labels/
 
-# Model weights
+# Model weights (large binary files)
 models/*.pt
 models/*.pth
 models/*.onnx
+models/*.tflite
+models/**/*.task
+models/**/*.tflite
 
 # Detection outputs
 outputs/
+!outputs/.gitkeep
 
-# Video files
+# Video files — never commit
 *.mp4
 *.avi
 *.mov
@@ -22,6 +30,8 @@ __pycache__/
 *.py[cod]
 *.pyo
 .ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
 
 # Virtual environments
 .env
@@ -42,3 +52,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Keep .gitkeep files trackable
+!**/.gitkeep

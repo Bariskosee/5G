@@ -1,18 +1,19 @@
-# TEKNOFEST 2026 — 5G & AI Smart Road Safety
+# TEKNOFEST 2026 - 5G & AI Smart Road Safety
 
 ## Project Title
-**TEKNOFEST 2026 — 5G & AI Smart Road Safety (Phase 1)**
+**TEKNOFEST 2026 - 5G & AI Smart Road Safety**
 
 ## Description
 This project is developed for the TEKNOFEST 2026 "5G & AI Smart Road Safety" competition.  
-**Phase 1** focuses on building an offline AI pipeline that processes video files to detect road-safety targets:
+The repository is organized for the FTR inference architecture: video/frame utilities, vehicle detection, OCR, landmark detection, tracking, color inference, ROI processing, and final output validation.
 
-- 🚗 **Vehicle Detection** — YOLO-based object detection
-- 🔡 **License Plate Recognition** — Detection + OCR pipeline
-- 🧠 **Driver Behavior Analysis** — Phone use, smoking, drowsiness, seatbelt detection
-- 📊 **Evaluation** — Precision, recall, IoU metrics
-
-> No mobile app or 5G integration in this phase.
+- **Vehicle Detection** - model-specific vehicle/object detection components
+- **OCR** - text extraction components for plate and scene text outputs
+- **Landmark** - landmark/keypoint inference components
+- **Tracking** - temporal association across frames
+- **Color** - vehicle color inference components
+- **ROI** - region-of-interest extraction and filtering
+- **Output** - final result formatting and schema validation
 
 ---
 
@@ -41,23 +42,24 @@ pip install -e .
 
 ```
 ├── configs/default.yaml        # Model & pipeline configuration
-├── data/
-│   ├── raw/                    # Competition video files (gitignored)
-│   ├── frames/                 # Extracted frames (gitignored)
-│   ├── labels/                 # Ground truth labels (gitignored)
-│   └── README.md
+├── datasets/                   # Competition datasets and local inputs (gitignored)
+├── docs/                       # Project documentation
 ├── models/                     # Trained weights (gitignored)
 ├── notebooks/                  # Exploratory Jupyter notebooks
+├── outputs/                    # Runtime outputs, logs, and visualisations (gitignored)
+├── reports/                    # Reports and submission drafts
+├── scripts/                    # Repository validation and utility entry points
 ├── src/
 │   ├── detection/              # Vehicle detection module
-│   ├── plate/                  # Plate recognition module
-│   ├── behavior/               # Driver behavior analysis
-│   ├── evaluation/             # Metrics
+│   ├── ocr/                    # OCR module
+│   ├── landmark/               # Landmark inference module
+│   ├── tracking/               # Object tracking module
+│   ├── color/                  # Color inference module
+│   ├── roi/                    # Region-of-interest utilities
+│   ├── output/                 # Result formatting module
 │   ├── utils/                  # Video, visualisation, logging helpers
-│   └── pipeline.py             # End-to-end pipeline
-├── scripts/                    # CLI entry points
-├── reports/                    # PDR drafts
-├── outputs/                    # Results, logs, visualisations (gitignored)
+│   ├── pipeline.py             # Pipeline orchestration
+│   └── predict.py              # Inference entry point
 └── tests/                      # Unit tests
 ```
 
@@ -65,22 +67,12 @@ pip install -e .
 
 ## Usage
 
-### 1. Extract frames from a video
+### Validate a results JSON fixture
 ```bash
-python scripts/extract_frames.py --video data/raw/sample.mp4 --output data/frames/sample --interval 1
+python scripts/validate_results_json.py tests/fixtures/dummy_results.json
 ```
 
-### 2. Run the full detection pipeline
-```bash
-python scripts/run_detection.py --video data/raw/sample.mp4 --config configs/default.yaml
-```
-
-### 3. Evaluate against ground truth
-```bash
-python scripts/evaluate.py --predictions outputs/predictions.json --labels data/labels/sample.json
-```
-
-### 4. Run unit tests
+### Run unit tests
 ```bash
 pytest tests/
 ```

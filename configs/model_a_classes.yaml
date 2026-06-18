@@ -1,0 +1,50 @@
+# Model A — YOLOv8m Unified Detector
+# These are INTERNAL model class names. They are mapped to competition
+# JSON labels via final_label_mapping.yaml — DO NOT change names here
+# without updating the mapping file in lockstep.
+
+nc: 14
+
+names:
+  0: sedan
+  1: suv
+  2: hatchback
+  3: pickup
+  4: minibus
+  5: panelvan
+  6: kamyon
+  7: phone
+  8: cigarette
+  9: drink
+  10: no_seatbelt
+  11: teknocan
+  12: laptop
+  13: person
+
+# Class grouping (for reference and class-weight calculation during training)
+groups:
+  vehicle_type:
+    - sedan
+    - suv
+    - hatchback
+    - pickup
+    - minibus
+    - panelvan
+    - kamyon
+  driver_behavior:
+    - phone
+    - cigarette
+    - drink
+    - no_seatbelt
+  objects:
+    - teknocan
+    - laptop
+  person:
+    - person
+
+# Rare classes that need oversampling / class-weight boost during training
+rare_classes:
+  - teknocan       # ~100-200 manual samples expected
+  - minibus        # TR-specific, manual collection
+  - panelvan       # TR-specific, manual collection
+  - kamyon         # TR-specific, manual collection

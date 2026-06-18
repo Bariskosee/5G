@@ -1,0 +1,28 @@
+{
+  "arac_bilgisi": {
+    "tip": "sedan",
+    "plaka": "34ABC123",
+    "renk": "beyaz",
+    "confidence_score": 0.87
+  },
+  "tespitler": [
+    {
+      "zaman_saniye": 4.2,
+      "kategori": "sofor_eylemi",
+      "etiket": "telefonla_konusma",
+      "confidence_score": 0.81
+    },
+    {
+      "zaman_saniye": 11.5,
+      "kategori": "nesneler",
+      "etiket": "teknocan",
+      "confidence_score": 0.74
+    },
+    {
+      "zaman_saniye": 17.0,
+      "kategori": "yolcular",
+      "etiket": "arka_koltuk_1",
+      "confidence_score": 0.92
+    }
+  ]
+}
