@@ -205,7 +205,8 @@ This is a local development limitation only. The official competition grader run
 **Linux x86_64 + NVIDIA Tesla T4**, where the Dockerfile is designed to work correctly.
 Final Docker validation must be performed on an equivalent Linux x86_64 + NVIDIA GPU
 environment before the FTR submission. See [docs/T4_DOCKER_VALIDATION.md](docs/T4_DOCKER_VALIDATION.md)
-for the full validation checklist.
+for the validation checklist and [docs/T4_REMOTE_RUNBOOK.md](docs/T4_REMOTE_RUNBOOK.md)
+for the step-by-step operational guide (exact commands, evidence collection, troubleshooting).
 
 Run static Docker packaging checks (no Docker daemon required):
 

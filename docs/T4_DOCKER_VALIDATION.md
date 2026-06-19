@@ -3,6 +3,9 @@
 This document describes how to perform the **real** Docker validation on an
 environment that matches the competition grader.
 
+> For the full step-by-step operational guide (exact commands, evidence collection,
+> troubleshooting), see [T4_REMOTE_RUNBOOK.md](T4_REMOTE_RUNBOOK.md).
+
 > Mac ARM64 Docker builds are expected to fail (CUDA PyTorch wheels not available
 > for ARM64). This does NOT mean the Dockerfile is wrong. The official grader
 > environment is Linux x86_64 + NVIDIA Tesla T4.
@@ -97,6 +100,16 @@ python -m json.tool /tmp/5g_docker_output/results.json
 
 Expected: validator prints `OK: ... is valid.`
 
+The JSON must contain all three top-level keys:
+
+```json
+{
+  "video_id": "video.mp4",
+  "arac_bilgisi": { "tip": "...", "plaka": "...", "renk": "...", "confidence_score": 0.0 },
+  "tespitler": []
+}
+```
+
 ---
 
 ## 6. Container Debug (if needed)
@@ -129,6 +142,7 @@ If `CUDA available: False` → verify NVIDIA Container Toolkit and `--gpus all` 
 | No crash if EasyOCR files not packaged | ✅ (fallback: `tespit_edilemedi`) |
 | `torch.cuda.is_available()` | `True` |
 | Runtime for a ≤5 min video at frame-stride 10 | ≤ 4 min (well within 10 min limit) |
+| Image size (`docker images`) | Reported as **uncompressed** virtual size. Competition limit (≤ 8 GB) applies to compressed export. Measure with `docker save IMAGE \| gzip \| wc -c`. |
 
 ---
 
@@ -142,13 +156,23 @@ If `CUDA available: False` → verify NVIDIA Container Toolkit and `--gpus all` 
 | Vehicle type, color, driver actions | Not yet implemented — skeleton outputs hardcoded placeholders |
 | Final FTR submission deadline | 28 June 2026, 17:00 Turkey time |
 
+For detailed troubleshooting (CUDA not found, best.pt missing in container, etc.)
+see [T4_REMOTE_RUNBOOK.md §14](T4_REMOTE_RUNBOOK.md#14-troubleshooting).
+
 ---
 
 ## 9. After Validation
 
 Once the container passes all checks on a real Linux x86_64 + NVIDIA GPU machine:
 
-1. Record the image size and runtime in the FTR report (§4 Çözümün Sınanması).
-2. Export the image: `docker save teknofest/5g-road-safety:local | gzip > 5g_road_safety.tar.gz`
-3. Verify the `.tar.gz` is within the 8 GB compressed limit.
-4. Upload via KYS before the submission deadline.
+1. Collect evidence logs into `/tmp/5g_t4_validation_evidence/`:
+   - `docker_build.log`, `docker_run.log`, `docker_images.txt`
+   - `nvidia_smi.txt` (`nvidia-smi > nvidia_smi.txt`)
+   - `container_debug.txt` (best.pt ls + `torch.cuda.is_available()`)
+   - `check_docker_packaging.txt`, `validation.log`, `results.json`
+2. Record the image size and runtime in the FTR report (§4 Çözümün Sınanması).
+3. Export the image: `docker save teknofest/5g-road-safety:local | gzip > 5g_road_safety.tar.gz`
+4. Verify the `.tar.gz` is within the 8 GB compressed limit.
+5. Upload via KYS before the submission deadline.
+
+See [T4_REMOTE_RUNBOOK.md §13](T4_REMOTE_RUNBOOK.md#13-collect-evidence) for the full evidence collection commands.
