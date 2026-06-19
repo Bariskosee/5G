@@ -10,7 +10,7 @@
 ## 1. Project Identity
 
 **Competition.** TEKNOFEST 2026 — "5G & Yapay Zekâ ile Akıllı Yol Güvenliği
-Yarışması," organized by Turkcell. We are team [TEAM_NAME].
+Yarışması," organized by Turkcell. We are team **Penta Tech**.
 
 **Current phase.** We are in **Phase 2 (Final Tasarım Raporu — FTR).**
 - Phase 1 (PDR / Ön Tasarım Raporu) is **complete and accepted**.
@@ -67,6 +67,7 @@ The competition auto-grader scores by exact key match. **Memorize this schema.**
 
 ```json
 {
+  "video_id": "video_001.mp4",
   "arac_bilgisi": {
     "tip": "sedan",
     "plaka": "34ABC123",
@@ -89,6 +90,7 @@ The competition auto-grader scores by exact key match. **Memorize this schema.**
 
 | Field | Allowed values |
 | --- | --- |
+| `video_id` | Video filename (e.g. `video_001.mp4`) — must match the input file name |
 | `arac_bilgisi.tip` | `sedan`, `suv`, `hatchback`, `pickup`, `minibus`, `panelvan`, `kamyon` |
 | `arac_bilgisi.renk` | `beyaz`, `siyah`, `gri`, `kirmizi`, `mavi`, `sari`, `yesil`, `turuncu`, `kahverengi` |
 | `arac_bilgisi.plaka` | Turkish plate format (e.g. `34ABC123`) OR `tespit_edilemedi` if OCR failed |
@@ -118,7 +120,7 @@ hybrid because each detection task has a different geometry:
 ```
 INPUT VIDEO
     │
-    ├──> frame sampler (every 5 frames)
+    ├──> frame sampler (every N frames — default: --frame-stride 10)
     │
     ├──> Model A: YOLOv8m unified detector
     │        ├── vehicle types (sedan/suv/hatchback/pickup/minibus/panelvan/kamyon)
@@ -167,31 +169,31 @@ to the deadline).
 
 ## 5. The 10-Minute Budget
 
-Assuming a 5-minute video at 30 fps = ~9000 frames. With `frame_sample_every_n=5`,
-we process ~1800 frames.
+Assuming a 5-minute video at 30 fps = ~9000 frames. With `--frame-stride 10`
+(current default), we process ~900 frames.
 
 Per-sampled-frame budget on T4:
 
-| Operation | Per-frame time | 1800 frames total |
+| Operation | Per-frame time | ~900 frames (stride=10) |
 | --- | --- | --- |
-| Decode + resize | ~3 ms | ~5 sec |
-| Model A (YOLOv8m, FP16, 640×640) | ~14 ms | ~25 sec |
-| Model B (YOLOv8s, FP16, 640×640) | ~8 ms | ~15 sec |
-| MediaPipe (face only, driver crop) | ~12 ms | ~22 sec |
-| HSV+Lab color (per vehicle bbox) | ~2 ms | ~4 sec |
-| Tracker update | ~3 ms | ~6 sec |
-| ROI mapping | ~1 ms | ~2 sec |
+| Decode + resize | ~3 ms | ~2.5 sec |
+| Model A (YOLOv8m, FP16, 640×640) | ~14 ms | ~12 sec |
+| Model B (YOLOv8s, FP16, 640×640) | ~8 ms | ~7 sec |
+| MediaPipe (face only, driver crop) | ~12 ms | ~11 sec |
+| HSV+Lab color (per vehicle bbox) | ~2 ms | ~2 sec |
+| Tracker update | ~3 ms | ~3 sec |
+| ROI mapping | ~1 ms | ~1 sec |
 | **EasyOCR (lazy, ~30 calls per video)** | ~80 ms × 30 | ~2.4 sec |
 | Aggregation + JSON write | — | ~1 sec |
-| Total compute | | **~80 sec** |
+| Total compute | | **~42 sec** |
 | Buffer for I/O, warmup, GC | | ~120 sec |
-| **Total wall-clock estimate** | | **~3-4 min** |
+| **Total wall-clock estimate** | | **~2-3 min** |
 
 This leaves comfortable margin. If we add operations, this table is the
 place to estimate cost first.
 
 **Optimizations already baked in:**
-- Frame sampling (every 5)
+- Frame sampling (every 10, default `--frame-stride 10`)
 - Lazy OCR (only on high-conf plates, cooldown 30 frames)
 - FP16 inference for both YOLOs (T4 has no FP8)
 - `opencv-python-headless`
@@ -217,15 +219,18 @@ TensorRT → smaller Model A (YOLOv8s instead of m) → coarser frame sampling.
 ├── .dockerignore
 ├── .gitignore
 ├── requirements.txt             # pinned versions only
+├── main.py                      # Docker CMD entry point — active FTR inference skeleton
 ├── configs/
 │   ├── model_a_classes.yaml     # Model A: 14 classes (internal names)
 │   ├── model_b_classes.yaml     # Model B: 1 class (license_plate)
 │   ├── final_label_mapping.yaml # Model class → competition JSON label
 │   └── thresholds.yaml          # All runtime parameters
 ├── docs/
-│   ├── annotation_guidelines.md # Manual labeling rules
-│   ├── data_sources.md          # Per-source tracking table
-│   └── architecture.md          # Long-form arch document (FTR-ready)
+│   ├── annotation_guidelines.md    # Manual labeling rules
+│   ├── data_sources.md             # Per-source tracking table
+│   ├── architecture.md             # Long-form arch document (FTR-ready)
+│   ├── FTR_TESTING.md              # Local test workflow and evidence guide
+│   └── T4_DOCKER_VALIDATION.md     # Linux x86_64 + T4 Docker validation checklist
 ├── datasets/                    # gitignored
 │   ├── model_a_unified/
 │   │   ├── images/{train,val,test}/
@@ -233,14 +238,15 @@ TensorRT → smaller Model A (YOLOv8s instead of m) → coarser frame sampling.
 │   │   └── data.yaml
 │   └── model_b_plate/
 │       └── (same structure)
-├── models/                      # gitignored, large .pt files
-│   ├── model_a_best.pt
-│   ├── model_b_best.pt
-│   └── mediapipe/face_landmarker.task
+├── models/                      # gitignored — weights are NOT in Git
+│   ├── model_b_plate/
+│   │   └── best.pt              # trained YOLOv8s, 21 MB — must exist before docker build
+│   ├── model_a_best.pt          # not yet trained (planned)
+│   └── mediapipe/face_landmarker.task  # not yet downloaded (planned)
 ├── src/
 │   ├── __init__.py
-│   ├── predict.py               # Main entrypoint — called by Docker CMD
-│   ├── pipeline.py              # Orchestrates one video → results.json
+│   ├── predict.py               # Stub — NOT called by main.py or Docker CMD
+│   ├── pipeline.py              # Stub — not yet implemented
 │   ├── detection/
 │   │   ├── model_a.py           # YOLOv8m wrapper
 │   │   └── model_b.py           # YOLOv8s plate wrapper
@@ -267,12 +273,17 @@ TensorRT → smaller Model A (YOLOv8s instead of m) → coarser frame sampling.
 │       ├── config.py            # YAML loader
 │       └── logger.py            # Structured logging
 ├── scripts/
-│   ├── validate_results_json.py # Schema validator — run before every build
-│   ├── remap_labels.py          # Source class names → Model A names
-│   ├── split_dataset.py         # 80/10/10 split per source
-│   ├── train_model_a.py         # YOLOv8m fine-tuning entry
-│   ├── train_model_b.py         # YOLOv8s plate fine-tuning entry
-│   └── benchmark_runtime.py     # Measure wall-clock on a test video
+│   ├── validate_results_json.py        # Schema validator — run before every build
+│   ├── check_docker_packaging.py       # Static Docker packaging check (11 checks)
+│   ├── run_ftr_video_tests.py          # Batch video test runner + summary.csv
+│   ├── generate_plate_visual_evidence.py  # YOLO annotated video/label generator
+│   ├── collect_ftr_evidence.py         # Collect report artifacts into one folder
+│   ├── audit_yolo_dataset.py           # Audit a YOLO dataset before training
+│   ├── dataset_stats.py                # Print class statistics for a dataset
+│   ├── remap_yolo_labels.py            # Remap source class names → project names
+│   ├── sample_yolo_dataset.py          # Create a small inspection sample
+│   ├── train_model_a.py                # YOLOv8m fine-tuning entry (planned)
+│   └── train_model_b.py                # YOLOv8s plate fine-tuning (used)
 ├── tests/
 │   ├── test_validator.py        # Test the schema validator itself
 │   ├── test_label_mapping.py    # Test config mapping correctness
@@ -366,17 +377,20 @@ See §5 for the optimization order. Always measure with
 `scripts/benchmark_runtime.py` first; don't optimize blindly.
 
 ### "Generate / fix / regenerate results.json"
-1. Run the pipeline: `python src/predict.py --input <video> --output outputs/results.json`
+1. Run the pipeline: `python main.py --input <video> --output outputs/results.json --plate-model models/model_b_plate/best.pt`
 2. **Always validate:** `python scripts/validate_results_json.py outputs/results.json`
 3. If validation fails, fix the formatter, not the validator.
 
 ### "Build the Docker image"
-1. Make sure local pipeline runs end-to-end first.
-2. Make sure `validate_results_json.py` passes on the local output.
-3. Build: `docker build -t teknofest-road-safety:latest .`
-4. Check size: `docker images teknofest-road-safety` — must be ≤ 8 GB.
-5. Test: `docker run --gpus all -v $(pwd)/data:/app/data teknofest-road-safety:latest`
-6. Validate the container's output: `python scripts/validate_results_json.py data/output/results.json`
+1. Make sure `models/model_b_plate/best.pt` exists locally.
+2. Make sure local pipeline runs end-to-end: `python main.py --input <video> --output outputs/results.json`
+3. Make sure `validate_results_json.py` passes on the local output.
+4. Run static packaging check: `python scripts/check_docker_packaging.py` (expect 11/11 PASS).
+5. Build (Linux x86_64 only): `docker build -t teknofest/5g-road-safety:latest .`
+6. Check size: `docker images teknofest/5g-road-safety` — must be ≤ 8 GB.
+7. Run: `docker run --rm --gpus all -v /abs/path/to/video.mp4:/app/data/input/video.mp4 -v /abs/path/to/out:/app/data/output teknofest/5g-road-safety:latest`
+8. Validate: `python scripts/validate_results_json.py /abs/path/to/out/results.json`
+9. See `docs/T4_DOCKER_VALIDATION.md` for the full Linux x86_64 + T4 checklist.
 
 ### "Write a section of the FTR report"
 1. The report goes in `docs/ftr_report/` (separate from CLAUDE.md scope).
@@ -395,7 +409,7 @@ any of them, stop and consult the team first.
 | --- | --- |
 | Hardcoding Turkish label strings in `src/` | Bypasses `final_label_mapping.yaml`. One typo = 0 points. |
 | Adding Turkish characters anywhere in output | Auto-grader rejects non-ASCII labels. |
-| Calling YOLO on every frame | Blows the 10-minute budget. Sample every 5. |
+| Calling YOLO on every frame | Blows the 10-minute budget. Default `--frame-stride 10`; tune per runtime budget. |
 | Calling OCR on every plate detection | Same. Use lazy OCR with cooldown. |
 | Training YOLO to detect "esneme" or "arkaya_bakma" | Data is too scarce, MediaPipe is the right tool. |
 | Using `opencv-python` instead of `opencv-python-headless` | ~150 MB bloat + GUI deps that fail in headless Docker. |
@@ -418,6 +432,9 @@ any of them, stop and consult the team first.
 | How model output becomes JSON labels | `configs/final_label_mapping.yaml` |
 | Any threshold / runtime parameter | `configs/thresholds.yaml` |
 | Output schema and validation rules | `scripts/validate_results_json.py` |
+| Docker packaging correctness (static) | `scripts/check_docker_packaging.py` |
+| Local video test workflow and evidence | `docs/FTR_TESTING.md` |
+| Linux x86_64 + T4 Docker validation | `docs/T4_DOCKER_VALIDATION.md` |
 | What we expect annotators to do | `docs/annotation_guidelines.md` |
 | What data we trained on, with licenses | `docs/data_sources.md` |
 | Detailed architecture for the FTR report | `docs/architecture.md` |
@@ -503,5 +520,5 @@ That's enough context to start being useful.
 
 ---
 
-*Last updated: 18 June 2026 — pre-FTR setup phase. Update this date whenever
-the file is edited.*
+*Last updated: 19 June 2026 — Milestone 3 complete: Model B trained, FTR skeleton,
+Docker packaging hardened. Team name: Penta Tech. Update this date whenever the file is edited.*
