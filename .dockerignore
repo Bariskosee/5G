@@ -21,5 +21,6 @@ notebooks
 *.mov
 *.mkv
 
-# Do not exclude models/. The local Docker build must include
-# models/model_b_plate/best.pt even though it is ignored by Git.
+# Model weights are ignored by Git (see .gitignore) but are intentionally
+# included in the Docker build context for local packaging. Do NOT add
+# models/ or *.pt here — best.pt must be copied into /app/models/ at build time.

@@ -12,6 +12,10 @@ from src.output.schema import clamp_confidence
 
 logger = logging.getLogger(__name__)
 
+# Restrict OCR output to plate-legal characters only.
+# This prevents EasyOCR from returning Turkish characters or punctuation.
+_PLATE_ALLOWLIST = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
 
 class PlateReader:
     """Read license plate text from crops using EasyOCR when available."""
@@ -43,7 +47,9 @@ class PlateReader:
         except Exception as exc:
             logger.warning(
                 "PlateReader: EasyOCR unavailable or model files missing; "
-                "continuing without OCR. Details: %s",
+                "continuing without OCR. Details: %s  "
+                "To enable OCR: install easyocr ('pip install easyocr') and ensure "
+                "EasyOCR language model files are present (baked into Docker image at build time).",
                 exc,
             )
             self._reader = None
@@ -77,7 +83,12 @@ class PlateReader:
 
         try:
             processed = self._preprocess(crop)
-            results = self._reader.readtext(processed, detail=1, paragraph=False)
+            results = self._reader.readtext(
+                processed,
+                detail=1,
+                paragraph=False,
+                allowlist=_PLATE_ALLOWLIST,
+            )
         except Exception as exc:
             logger.warning("PlateReader: OCR failed for crop; continuing. Details: %s", exc)
             return []
