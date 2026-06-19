@@ -35,10 +35,15 @@ VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv"}
 
 
 def _discover_videos(input_dir: Path) -> list[Path]:
-    """Return all files that look like videos (by extension or absence of extension)."""
+    """Return all files that look like videos (by extension or absence of extension).
+
+    Hidden files (names starting with '.') are always skipped.
+    """
     candidates: list[Path] = []
     for path in sorted(input_dir.iterdir()):
         if not path.is_file():
+            continue
+        if path.name.startswith("."):
             continue
         if path.suffix.lower() in VIDEO_EXTENSIONS:
             candidates.append(path)
@@ -153,6 +158,25 @@ def _parse_json_fields(json_path: Path) -> tuple[str | None, float | None, int |
         return None, None, None
 
 
+def _parse_inference_log(log_path: Path) -> tuple[int, int]:
+    """Return (sampled_frames, frames_with_plate_detection) by parsing run.log stderr."""
+    sampled, detected = 0, 0
+    if not log_path.exists():
+        return sampled, detected
+    for line in log_path.read_text(encoding="utf-8").splitlines():
+        if "Sampled frames:" in line:
+            try:
+                sampled = int(line.split("Sampled frames:")[-1].strip())
+            except ValueError:
+                pass
+        elif "Frames with plate detections:" in line:
+            try:
+                detected = int(line.split("Frames with plate detections:")[-1].strip())
+            except ValueError:
+                pass
+    return sampled, detected
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -216,6 +240,9 @@ def main(argv: list[str] | None = None) -> int:
                 "duration_s": probe["duration_s"],
                 "runtime_s": "",
                 "effective_video_fps": "",
+                "processed_sampled_frames": "",
+                "frames_with_plate_detection": "",
+                "plate_detection_frame_ratio": "",
                 "json_valid": False,
                 "return_code": "",
                 "plate_output": "",
@@ -249,13 +276,15 @@ def main(argv: list[str] | None = None) -> int:
 
         json_valid = _validate_json(output_json, args.python, repo_root)
         plate, conf, n_det = _parse_json_fields(output_json)
+        sampled_frames, frames_detected = _parse_inference_log(log_path)
         dur = probe["duration_s"]
         eff_fps = round(dur / elapsed, 3) if elapsed > 0 else 0.0
+        det_ratio = round(frames_detected / sampled_frames, 4) if sampled_frames > 0 else 0.0
 
         status = "ok" if rc == 0 and json_valid else "failed"
         logger.info(
-            "  status=%s rc=%s runtime=%.2fs valid=%s plate=%s",
-            status, rc, elapsed, json_valid, plate,
+            "  status=%s rc=%s runtime=%.2fs valid=%s plate=%s sampled=%d detected=%d",
+            status, rc, elapsed, json_valid, plate, sampled_frames, frames_detected,
         )
 
         summary_rows.append({
@@ -267,6 +296,9 @@ def main(argv: list[str] | None = None) -> int:
             "duration_s": dur,
             "runtime_s": round(elapsed, 3),
             "effective_video_fps": eff_fps,
+            "processed_sampled_frames": sampled_frames,
+            "frames_with_plate_detection": frames_detected,
+            "plate_detection_frame_ratio": det_ratio,
             "json_valid": json_valid,
             "return_code": rc,
             "plate_output": plate,

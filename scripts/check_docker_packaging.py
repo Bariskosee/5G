@@ -126,6 +126,22 @@ def main() -> int:
         req.exists(),
     ))
 
+    copy_models_ok = "COPY models/" in df and "/app/models" in df
+    results.append(_check(
+        "Dockerfile COPYs models/ into /app/models/",
+        copy_models_ok,
+        "found" if copy_models_ok else "COPY models/ /app/models/ not found in Dockerfile",
+    ))
+
+    main_py = (REPO_ROOT / "main.py").read_text(encoding="utf-8") if (REPO_ROOT / "main.py").exists() else ""
+    expected_default = "/app/models/model_b_plate/best.pt"
+    main_path_ok = expected_default in main_py
+    results.append(_check(
+        f"main.py default plate model: {expected_default}",
+        main_path_ok,
+        "found" if main_path_ok else f"'{expected_default}' not found in main.py",
+    ))
+
     print("=" * 40)
     passed = sum(results)
     total = len(results)

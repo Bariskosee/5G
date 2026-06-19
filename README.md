@@ -140,11 +140,16 @@ OCR should produce a normalized Turkish plate string when available.
 
 Tested on 3 local 4K/50 FPS videos (`--frame-stride 10`, OCR disabled):
 
-| video_id | Resolution | Source FPS | Duration | Runtime | Plate Frames | JSON Valid |
+| video_id | Resolution | Source FPS | Duration | Runtime | Plate Det. / Sampled | JSON Valid |
 |---|---|---|---|---|---|---|
 | video_1.mp4 | 3840×2160 | 50 | 8.46 s | 6.3 s | 21 / 43 | ✅ |
 | video_2.mp4 | 3840×2160 | 50 | 9.14 s | 6.4 s | 21 / 46 | ✅ |
 | video_3.mp4 | 3840×2160 | 50 | 7.66 s | 5.8 s | 9 / 39 | ✅ |
+
+> **Note:** "Plate Det. / Sampled" is the count of sampled frames that produced at least one
+> plate bbox detection, over the total number of sampled frames processed (`--frame-stride 10`).
+> This is a **sampled-frame detection frequency**, not a precision or recall metric.
+> Frame-level ground truth labels are not available for these videos.
 
 Run reproducibly with:
 
@@ -197,8 +202,10 @@ ERROR: Could not find a version that satisfies the requirement torch==2.3.1
 ```
 
 This is a local development limitation only. The official competition grader runs on
-**Linux x86_64 + NVIDIA Tesla T4**, where the Dockerfile works correctly.
-Final Docker validation must be performed in a real Linux x86_64 + NVIDIA GPU environment.
+**Linux x86_64 + NVIDIA Tesla T4**, where the Dockerfile is designed to work correctly.
+Final Docker validation must be performed on an equivalent Linux x86_64 + NVIDIA GPU
+environment before the FTR submission. See [docs/T4_DOCKER_VALIDATION.md](docs/T4_DOCKER_VALIDATION.md)
+for the full validation checklist.
 
 Run static Docker packaging checks (no Docker daemon required):
 

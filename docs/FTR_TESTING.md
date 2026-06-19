@@ -26,7 +26,7 @@ and writes `summary.csv` + `video_metadata.csv`.
 
 ```bash
 python scripts/run_ftr_video_tests.py \
-  --input-dir datasets/raw/turkish_number_plates/dataset \
+  --input-dir /path/to/ftr/videos \
   --output-dir /tmp/5g_ftr_outputs \
   --work-dir /tmp/5g_ftr_videos \
   --plate-model models/model_b_plate/best.pt \
@@ -34,6 +34,10 @@ python scripts/run_ftr_video_tests.py \
   --disable-ocr \
   --overwrite
 ```
+
+> Replace `/path/to/ftr/videos` with the actual path to your FTR smoke-test videos.
+> The Turkish Number Plates training dataset (`datasets/raw/turkish_number_plates/`) is for
+> Model B training and is **not** the FTR smoke-test video source.
 
 **Arguments:**
 
@@ -217,7 +221,7 @@ python scripts/check_docker_packaging.py
 
 # Full local test
 python scripts/run_ftr_video_tests.py \
-  --input-dir datasets/raw/turkish_number_plates/dataset \
+  --input-dir /path/to/ftr/videos \
   --output-dir /tmp/5g_ftr_outputs \
   --plate-model models/model_b_plate/best.pt \
   --frame-stride 10 --disable-ocr --overwrite
