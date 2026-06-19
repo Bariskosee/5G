@@ -53,6 +53,9 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Claude Code project settings
+.claude/
+
 # Keep .gitkeep files trackable
 !**/.gitkeep
 
