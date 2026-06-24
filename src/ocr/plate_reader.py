@@ -41,6 +41,7 @@ class PlateReader:
                 list(languages),
                 gpu=use_gpu,
                 download_enabled=False,
+                model_storage_directory="/root/.EasyOCR",
                 verbose=False,
             )
             self.available = True

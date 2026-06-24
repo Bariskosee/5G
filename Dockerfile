@@ -33,6 +33,12 @@ RUN python3 -m pip install --no-cache-dir \
 RUN sed '/^torch==/d;/^torchvision==/d' /app/requirements.txt > /tmp/requirements-no-torch.txt \
     && python3 -m pip install --no-cache-dir -r /tmp/requirements-no-torch.txt
 
+# Pre-download EasyOCR model files at build time.
+# Runtime has no internet, so OCR checkpoints must be baked into the image.
+# Turkish license plates use ASCII A-Z/0-9, and OCR filtering already uses an ASCII allowlist.
+RUN mkdir -p /root/.EasyOCR && \
+    python3 -c "import easyocr; easyocr.Reader(['en'], gpu=False, model_storage_directory='/root/.EasyOCR', verbose=True)"
+
 COPY main.py /app/main.py
 COPY src/ /app/src/
 COPY configs/ /app/configs/

@@ -71,7 +71,7 @@ def run(args: argparse.Namespace) -> int:
         logger.error("Could not initialize plate detector: %s", exc)
         return 1
 
-    reader = PlateReader(enabled=not args.disable_ocr)
+    reader = PlateReader(languages=["en"], enabled=not args.disable_ocr)
 
     try:
         for frame_index, time_seconds, frame in iter_video_frames(
