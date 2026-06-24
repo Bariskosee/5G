@@ -520,5 +520,64 @@ That's enough context to start being useful.
 
 ---
 
-*Last updated: 19 June 2026 — Milestone 3 complete: Model B trained, FTR skeleton,
-Docker packaging hardened. Team name: Penta Tech. Update this date whenever the file is edited.*
+## 15. Current FTR Engineering Status (updated 2026-06-24)
+
+### Milestone 4 — Real T4/Linux Docker Validation Completed (2026-06-24)
+
+- Real Docker validation completed on **Lightning AI Studio** (Linux x86_64 + NVIDIA Tesla T4).
+- Environment verified: `uname -m` → `x86_64`, `nvidia-smi` → Tesla T4, Docker 28.0.1.
+- CUDA base image GPU test (`docker run --rm --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi`) passed.
+- `models/model_b_plate/best.pt` (22 MB) and a test video (16 MB) uploaded via SCP to the Lightning instance.
+- `scripts/check_docker_packaging.py` passed **11/11 checks**.
+- Docker image `teknofest/5g-road-safety:local` built successfully — virtual size ~7.51 GB.
+- Container ran with `--gpus all`, read `/app/data/input/video.mp4`, wrote `/app/data/output/results.json`.
+- Output JSON passed `scripts/validate_results_json.py`.
+- Docker image exported and downloaded to Mac: `/Users/bariskose/Desktop/5g_road_safety.tar.gz`.
+- Final compressed archive size on Mac: **~3.4 GB** — below the 8 GB limit.
+- `gzip -t` on the archive returned exit code 0 (integrity confirmed).
+- T4 validation evidence downloaded to: `/Users/bariskose/Desktop/5g_t4_validation_evidence/`.
+- See `docs/T4_DOCKER_VALIDATION.md §9` for the full evidence table.
+
+### Current limitations after Milestone 4
+
+- Docker packaging / runtime / schema compliance is **confirmed**.
+- **AI output quality is not final.** The validated Docker run produced:
+  ```json
+  {
+    "video_id": "video.mp4",
+    "arac_bilgisi": {"tip": "sedan", "plaka": "tespit_edilemedi", "renk": "beyaz", "confidence_score": 0.01},
+    "tespitler": []
+  }
+  ```
+- OCR currently falls back to `tespit_edilemedi`.
+- Vehicle type and color are hardcoded placeholder values.
+- Driver action, passenger, and object detection logic is not yet fully implemented.
+
+### Next engineering priorities
+
+1. **OCR finalization** — improve plate crop preprocessing, ensure EasyOCR language packs are baked
+   into the image, avoid runtime downloads, return actual plate strings instead of `tespit_edilemedi`.
+2. **Output quality** — replace vehicle type/color placeholders with real inference, add evidence-backed
+   confidence values, avoid fake precision.
+3. **FTR report** — add Docker validation evidence table, compressed image size, and JSON validation
+   proof. Clearly separate "validated packaging" from "AI detection performance."
+4. **Submission hygiene** — verify `best.pt` is in Docker image but not in Git, no video/tar files
+   committed, KYS upload path confirmed.
+
+### Operational warnings for future sessions
+
+- **Do not rerun full T4 validation unnecessarily.** Rerun only if Dockerfile, dependencies,
+  entrypoint, model path, or runtime logic changes significantly.
+- **Do not commit large artifacts:** `best.pt`, `.mp4` videos, `*.tar.gz`, split image parts,
+  datasets, or large evidence bundles.
+- **Do not store Lightning SSH setup URLs or tokens in docs.** Only generic SCP/SSH workflow.
+- **Do not rely on `/tmp` on Lightning for persistent file handoff.** Use
+  `/teamspace/studios/this_studio/` instead.
+- **For large Docker image downloads, split first.** `scp` of a single 3.5 GB file failed.
+  Use `split -b 500M`, download parts, then `cat part_* > archive.tar.gz` locally.
+
+---
+
+*Last updated: 2026-06-24 — Milestone 4 complete: real T4/Linux Docker validation passed on
+Lightning AI Studio. Compressed image ~3.4 GB, schema-valid JSON produced, evidence artifacts
+downloaded to Mac. Next focus: OCR and inference output quality. Team name: Penta Tech.*

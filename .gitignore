@@ -79,8 +79,14 @@ Thumbs.db
 # Training outputs and model artifacts
 runs/
 *.zip
+*.tar
+*.tar.gz
 yolov8*.pt
 models/**/*.pt
+
+# Docker image export artifacts — never commit
+5g_image_parts/
+5g_road_safety.tar.gz
 
 # Keep model folders without tracking weights
 !models/**/.gitkeep

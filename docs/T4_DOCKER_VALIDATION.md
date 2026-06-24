@@ -146,13 +146,13 @@ If `CUDA available: False` → verify NVIDIA Container Toolkit and `--gpus all` 
 
 ---
 
-## 8. Known Limitations at Time of Writing
+## 8. Known Limitations / Status
 
 | Item | Status |
 |---|---|
 | Mac ARM64 Docker build | Expected to fail — CUDA PyTorch wheels not available for ARM64 |
-| T4 / Linux x86_64 Docker build | Not yet validated — this checklist covers it |
-| EasyOCR OCR model files | Not yet baked into Docker image — OCR falls back to `tespit_edilemedi` |
+| T4 / Linux x86_64 Docker build | **Validated on Lightning AI Tesla T4 on 2026-06-24** |
+| EasyOCR OCR model files | Not yet fully baked in — OCR falls back to `tespit_edilemedi` in current run |
 | Vehicle type, color, driver actions | Not yet implemented — skeleton outputs hardcoded placeholders |
 | Final FTR submission deadline | 28 June 2026, 17:00 Turkey time |
 
@@ -161,7 +161,69 @@ see [T4_REMOTE_RUNBOOK.md §14](T4_REMOTE_RUNBOOK.md#14-troubleshooting).
 
 ---
 
-## 9. After Validation
+## 9. Actual T4 Validation Result — 2026-06-24
+
+The Docker image was validated on Lightning AI Studio using a Linux x86_64 environment
+with an NVIDIA Tesla T4 GPU.
+
+| Check | Result |
+|---|---|
+| Host architecture (`uname -m`) | `x86_64` |
+| GPU | NVIDIA Tesla T4 (Driver 580.159.03) |
+| Docker version | 28.0.1 |
+| CUDA base image GPU test (`docker run --rm --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi`) | Passed |
+| Static packaging check (`scripts/check_docker_packaging.py`) | 11/11 passed |
+| Docker build | Passed |
+| Docker image virtual size | ~7.51 GB |
+| Docker run with `--gpus all` | Passed |
+| Output file produced | `/app/data/output/results.json` |
+| JSON schema validation (`scripts/validate_results_json.py`) | `OK: ... is valid.` |
+| Compressed image size | ~3.4–3.5 GB |
+| `gzip -t` on final archive | Exit code 0 |
+| Final image archive on Mac | `/Users/bariskose/Desktop/5g_road_safety.tar.gz` |
+| T4 evidence folder on Mac | `/Users/bariskose/Desktop/5g_t4_validation_evidence/` |
+
+Evidence files collected:
+
+```
+check_docker_packaging.txt
+container_debug.txt
+docker_build.log
+docker_images.txt
+docker_run.log
+nvidia_smi.txt
+results.json
+validation.log
+```
+
+The JSON produced during this validation run was:
+
+```json
+{
+  "video_id": "video.mp4",
+  "arac_bilgisi": {
+    "tip": "sedan",
+    "plaka": "tespit_edilemedi",
+    "renk": "beyaz",
+    "confidence_score": 0.01
+  },
+  "tespitler": []
+}
+```
+
+**This validates Docker packaging / runtime / schema compliance. It does NOT represent
+final AI model output quality.**
+
+> **Note on large file transfer:** `scp` of a single 3.5 GB archive failed mid-transfer.
+> The working approach was to split the archive into 500 MB parts with
+> `split -b 500M`, download the parts, then concatenate locally with
+> `cat part_* > archive.tar.gz`. Use `/teamspace/studios/this_studio/` (not `/tmp`)
+> as the persistent handoff directory on Lightning, since `/tmp` does not survive
+> long enough for multi-step downloads.
+
+---
+
+## 10. After Validation
 
 Once the container passes all checks on a real Linux x86_64 + NVIDIA GPU machine:
 
