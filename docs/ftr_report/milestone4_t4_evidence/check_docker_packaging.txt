@@ -1,0 +1,15 @@
+Docker Packaging Checks
+========================================
+  [PASS] Dockerfile exists  (Dockerfile)
+  [PASS] Dockerfile FROM: nvidia/cuda:12.1.0-base-ubuntu22.04  (found)
+  [PASS] Dockerfile CMD: python3 main.py  (found)
+  [PASS] .dockerignore exists  (.dockerignore)
+  [PASS] .dockerignore does NOT exclude models/  (OK — models/ will be included in build context)
+  [PASS] .dockerignore does NOT exclude *.pt  (OK — .pt files reachable for COPY)
+  [PASS] Local model weights exist: models/model_b_plate/best.pt  (21 MB)
+  [PASS] Model weights are gitignored  (OK — will not be committed)
+  [PASS] requirements.txt exists
+  [PASS] Dockerfile COPYs models/ into /app/models/  (found)
+  [PASS] main.py default plate model: /app/models/model_b_plate/best.pt  (found)
+========================================
+PASS: 11/11 checks passed.

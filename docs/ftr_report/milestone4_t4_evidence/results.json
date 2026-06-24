@@ -1,0 +1,10 @@
+{
+  "video_id": "video.mp4",
+  "arac_bilgisi": {
+    "tip": "sedan",
+    "plaka": "tespit_edilemedi",
+    "renk": "beyaz",
+    "confidence_score": 0.01
+  },
+  "tespitler": []
+}

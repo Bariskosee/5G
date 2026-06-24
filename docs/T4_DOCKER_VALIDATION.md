@@ -178,23 +178,28 @@ with an NVIDIA Tesla T4 GPU.
 | Docker run with `--gpus all` | Passed |
 | Output file produced | `/app/data/output/results.json` |
 | JSON schema validation (`scripts/validate_results_json.py`) | `OK: ... is valid.` |
-| Compressed image size | ~3.4–3.5 GB |
+| Compressed image size | ~3.4 GB |
+| Compressed archive SHA256 | `a7cb1036fa590749e7206f1b06c5154d5ee7e2993556b91ad9a07980afb46a60` |
 | `gzip -t` on final archive | Exit code 0 |
 | Final image archive on Mac | `/Users/bariskose/Desktop/5g_road_safety.tar.gz` |
 | T4 evidence folder on Mac | `/Users/bariskose/Desktop/5g_t4_validation_evidence/` |
 
-Evidence files collected:
+Evidence files committed to `docs/ftr_report/milestone4_t4_evidence/`
+(except `docker_build.log` which is large and archived on Mac only):
 
 ```
 check_docker_packaging.txt
 container_debug.txt
-docker_build.log
 docker_images.txt
 docker_run.log
+final_image_size.txt
+image_sha256.txt
 nvidia_smi.txt
 results.json
 validation.log
 ```
+
+`docker_build.log` — archived at `/Users/bariskose/Desktop/5g_t4_validation_evidence/docker_build.log` (not committed — large file).
 
 The JSON produced during this validation run was:
 

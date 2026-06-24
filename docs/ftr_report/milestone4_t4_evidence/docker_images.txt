@@ -1,0 +1,2 @@
+REPOSITORY                 TAG       IMAGE ID       CREATED          SIZE
+teknofest/5g-road-safety   local     cef2ba7b455b   30 seconds ago   7.51GB

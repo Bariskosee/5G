@@ -1,0 +1,5 @@
+-rw-r--r-- 1 root root 22M Jun 24 15:34 /app/models/model_b_plate/best.pt
+torch: 2.3.1+cu121
+cuda_available: True
+device: Tesla T4
+vram_gb: 14.6
