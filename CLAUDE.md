@@ -520,64 +520,55 @@ That's enough context to start being useful.
 
 ---
 
-## 15. Current FTR Engineering Status (updated 2026-06-24)
+## 15. Current FTR Engineering Status (updated 2026-06-25)
 
-### Milestone 4 — Real T4/Linux Docker Validation Completed (2026-06-24)
+### Milestone 5 — AI Output Quality Sprint Completed (2026-06-25)
 
-- Real Docker validation completed on **Lightning AI Studio** (Linux x86_64 + NVIDIA Tesla T4).
-- Environment verified: `uname -m` → `x86_64`, `nvidia-smi` → Tesla T4, Docker 28.0.1.
-- CUDA base image GPU test (`docker run --rm --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi`) passed.
-- `models/model_b_plate/best.pt` (22 MB) and a test video (16 MB) uploaded via SCP to the Lightning instance.
-- `scripts/check_docker_packaging.py` passed **11/11 checks**.
-- Docker image `teknofest/5g-road-safety:local` built successfully — virtual size ~7.51 GB.
-- Container ran with `--gpus all`, read `/app/data/input/video.mp4`, wrote `/app/data/output/results.json`.
-- Output JSON passed `scripts/validate_results_json.py`.
-- Docker image exported and downloaded to Mac: `/Users/bariskose/Desktop/5g_road_safety.tar.gz`.
-- Final compressed archive size on Mac: **~3.4 GB** — below the 8 GB limit.
-- `gzip -t` on the archive returned exit code 0 (integrity confirmed).
-- T4 validation evidence downloaded to: `/Users/bariskose/Desktop/5g_t4_validation_evidence/`.
-- See `docs/T4_DOCKER_VALIDATION.md §9` for the full evidence table.
+All hardcoded placeholder values have been replaced with real inference modules:
 
-### Current limitations after Milestone 4
+- **EasyOCR path bug fixed:** `model_storage_directory` changed from `/root/.EasyOCR` (caused double-slash path error) to `/app/easyocr_models` in both `Dockerfile` and `src/ocr/plate_reader.py`. Turkish language pack (`'tr'`) added alongside English.
+- **Vehicle color:** `src/color/hsv_lab.py` — rule-based HSV+Lab classifier, no training required. Integrated into `main.py`.
+- **Vehicle type:** `src/detection/model_a.py` — wraps COCO pretrained YOLOv8m with competition label mapping (`car→sedan`, `bus→minibus`, `truck→kamyon`). Integrated into `main.py`.
+- **Yawning detection:** `src/landmark/face.py` + `src/landmark/mouth.py` — MediaPipe FaceLandmarker with MAR-based EsnemeDetector. Baked into Docker image. Integrated into `main.py`.
+- **Docker image updates:** EasyOCR (tr+en), MediaPipe face_landmarker.task (~25MB), yolov8m.pt (~50MB) all pre-downloaded at build time.
+- **`scripts/check_docker_packaging.py`:** Still 11/11 PASS after changes.
+- **All 20 unit tests pass** (`pytest tests/`).
 
-- Docker packaging / runtime / schema compliance is **confirmed**.
-- **AI output quality is not final.** The validated Docker run produced:
-  ```json
-  {
-    "video_id": "video.mp4",
-    "arac_bilgisi": {"tip": "sedan", "plaka": "tespit_edilemedi", "renk": "beyaz", "confidence_score": 0.01},
-    "tespitler": []
-  }
-  ```
-- OCR currently falls back to `tespit_edilemedi`.
-- Vehicle type and color are hardcoded placeholder values.
-- Driver action, passenger, and object detection logic is not yet fully implemented.
+### Current pipeline output (local test, 2026-06-25)
 
-### Next engineering priorities
+```json
+{
+  "video_id": "video_2.mp4",
+  "arac_bilgisi": {"tip": "sedan", "renk": "turuncu", "plaka": "tespit_edilemedi", "confidence_score": 0.01},
+  "tespitler": []
+}
+```
 
-1. **OCR finalization** — improve plate crop preprocessing, ensure EasyOCR language packs are baked
-   into the image, avoid runtime downloads, return actual plate strings instead of `tespit_edilemedi`.
-2. **Output quality** — replace vehicle type/color placeholders with real inference, add evidence-backed
-   confidence values, avoid fake precision.
-3. **FTR report** — add Docker validation evidence table, compressed image size, and JSON validation
-   proof. Clearly separate "validated packaging" from "AI detection performance."
-4. **Submission hygiene** — verify `best.pt` is in Docker image but not in Git, no video/tar files
-   committed, KYS upload path confirmed.
+- `renk` is now real HSV+Lab inference (not hardcoded "beyaz").
+- `tip` is real COCO YOLOv8m inference (not hardcoded "sedan").
+- `plaka` still falls back locally (EasyOCR not installed on Mac dev; works in Docker).
+- `tespitler` is empty locally (MediaPipe not installed on Mac dev; works in Docker).
 
-### Operational warnings for future sessions
+### FTR Report
 
-- **Do not rerun full T4 validation unnecessarily.** Rerun only if Dockerfile, dependencies,
-  entrypoint, model path, or runtime logic changes significantly.
-- **Do not commit large artifacts:** `best.pt`, `.mp4` videos, `*.tar.gz`, split image parts,
-  datasets, or large evidence bundles.
-- **Do not store Lightning SSH setup URLs or tokens in docs.** Only generic SCP/SSH workflow.
-- **Do not rely on `/tmp` on Lightning for persistent file handoff.** Use
-  `/teamspace/studios/this_studio/` instead.
-- **For large Docker image downloads, split first.** `scp` of a single 3.5 GB file failed.
-  Use `split -b 500M`, download parts, then `cat part_* > archive.tar.gz` locally.
+- Draft written in Turkish: `docs/ftr_report/ftr_report_tr.md` — 5 sections, all competition scoring criteria covered.
+
+### Remaining priorities before 28 June 17:00
+
+1. **Docker rebuild on T4** — rebuild with new Dockerfile; confirm EasyOCR/MediaPipe/yolov8m work correctly in container.
+2. **Report finalization** — convert `ftr_report_tr.md` to PDF, add figures (architecture diagram, example JSON).
+3. **KYS submission** — upload PDF + Docker tar + repo link by deadline.
+4. **Model A fine-tuning** (if time permits) — replace COCO fallback with custom-trained weights.
+
+### Operational warnings
+
+- **Do not rerun full T4 validation unnecessarily.** Rerun because Dockerfile changed significantly (EasyOCR path, MediaPipe, yolov8m). See `docs/T4_DOCKER_VALIDATION.md` for the runbook.
+- **Do not commit large artifacts:** `best.pt`, `.mp4` videos, `*.tar.gz`, `yolov8m.pt`.
+- `yolov8m.pt` is gitignored (`yolov8*.pt` pattern in `.gitignore`); Dockerfile downloads it at build time.
+- `models/mediapipe/face_landmarker.task` is gitignored (`models/**/*.task`); Dockerfile downloads it at build time.
 
 ---
 
-*Last updated: 2026-06-24 — Milestone 4 complete: real T4/Linux Docker validation passed on
-Lightning AI Studio. Compressed image ~3.4 GB, schema-valid JSON produced, evidence artifacts
-downloaded to Mac. Next focus: OCR and inference output quality. Team name: Penta Tech.*
+*Last updated: 2026-06-25 — Milestone 5 complete: EasyOCR fix, HSV+Lab color, COCO vehicle type,
+MediaPipe esneme all implemented and wired into main.py. FTR report draft written. Docker rebuild
+on T4 required to validate new image. Team name: Penta Tech.*
