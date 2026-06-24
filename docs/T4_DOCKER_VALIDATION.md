@@ -152,8 +152,8 @@ If `CUDA available: False` → verify NVIDIA Container Toolkit and `--gpus all` 
 |---|---|
 | Mac ARM64 Docker build | Expected to fail — CUDA PyTorch wheels not available for ARM64 |
 | T4 / Linux x86_64 Docker build | **Validated on Lightning AI Tesla T4 on 2026-06-24** |
-| EasyOCR OCR model files | Not yet fully baked in — OCR falls back to `tespit_edilemedi` in current run |
-| Vehicle type, color, driver actions | Not yet implemented — skeleton outputs hardcoded placeholders |
+| EasyOCR OCR model files | ✅ Fixed 2026-06-25 — `/app/easyocr_models` path, `tr`+`en` packs baked in; no double-slash bug |
+| Vehicle type, color, driver actions | ✅ Implemented 2026-06-25 — HSV+Lab color, COCO YOLOv8m vehicle type, MediaPipe esneme all wired into `main.py` |
 | Final FTR submission deadline | 28 June 2026, 17:00 Turkey time |
 
 For detailed troubleshooting (CUDA not found, best.pt missing in container, etc.)

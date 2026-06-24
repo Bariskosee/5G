@@ -116,7 +116,42 @@ parametreleri `configs/thresholds.yaml` dosyasında yapılandırılmıştır.
 
 ## 3. Yapay Zekâ Çözümü
 
-### 3.1 Mimari Genel Görünüm
+### 3.1 Problemin Analizi
+
+Karayolu güvenliği için gerçek zamanlı sürücü davranışı tespiti, aşağıdaki
+temel zorluklarla karşı karşıyadır:
+
+**Görüntü kalitesi zorlukları:**
+
+| Zorluk | Açıklama |
+|---|---|
+| Işık değişimleri | Gündüz/gece, tünel girişi-çıkışı, güneş parlaması; pikseller çok farklı parlaklık aralıklarında dağılır |
+| Hareket bulanıklığı | Hızlı kafa hareketi veya yüksek FPS'de bile düşük pozlama süresi; yüz landmarkları belirsizleşir |
+| Oklüzyon | Araç içi aksesuar, direksiyon, A-pileri sürücü yüzünü kısmen kapatır |
+| Çözünürlük ve kırpma | Farklı kamera kurulumları %40–90 arası yüz görüntüleme oranı üretir |
+| Plaka kirliliği | Çamur, ışık yansıması, kamera açısı OCR başarı oranını düşürür |
+| Gece/sis/yağmur | Düşük kontrast ortamlar tüm modeller için tahmin güvenini azaltır |
+
+**Görev geometrisi farklılıkları:**
+
+Araç tipi tespiti, plaka okuma, esneme tespiti ve renk sınıflandırması birbirinden
+yapısal olarak farklı sorunlardır. Tek bir uçtan uca modelin tüm bu görevleri
+birlikte öğrenmesi veri yetersizliği ve görev gürültüsü sorunları yaratır:
+
+- **Bounding box tespiti** (araç tipi, plaka) → nesne tespiti uygundur.
+- **Metin tanıma** (plaka OCR) → görüntüden metin çıkarma uygundur; YOLO metin okuyamaz.
+- **Yüz geometrisi** (esneme, arkaya bakma) → landmark tabanlı analiz uygundur.
+  `esneme` gibi davranışlar için etiketli video verisi son derece kısıtlıdır ve
+  YOLO'nun bu sınıfları güvenilir biçimde öğrenmesi mümkün değildir; MediaPipe
+  önceden eğitilmiş genel yüz modeli bu boşluğu doldurur.
+- **Renk analizi** → piksel istatistikleri uygundur; YOLO'nun renk öğrenmesi
+  aydınlatma değişimleriyle tutarsızlaşır.
+
+**Seçilen yaklaşım:** Her alt göreve özelleştirilmiş araçlardan oluşan hibrit
+boru hattı. Bu yaklaşım; model başına veri yükünü azaltır, her bileşenin
+bağımsız doğrulanmasını sağlar ve bütçe sınırı içinde (≤ 10 dakika/video) çalışır.
+
+### 3.2 Çözüm Mimarisi
 
 Sistem, tek bir uçtan uca model yerine her tespit görevine özelleştirilmiş
 bileşenlerden oluşan karma (hibrit) bir boru hattı kullanmaktadır. Bu tercih,
@@ -156,7 +191,7 @@ GİRDİ VİDEOSU
 ÇIKTI: toplanmış arac_bilgisi (video başına bir) + tespitler listesi → results.json
 ```
 
-### 3.2 Model A — YOLOv8m Birleşik Dedektör
+### 3.3 Model A — YOLOv8m Birleşik Dedektör
 
 **Neden YOLOv8m?**
 YOLOv8, üretim ortamında yaygın kullanımı, kapsamlı dokümantasyonu, güçlü
@@ -190,7 +225,7 @@ isimleri yarışma etiketlerine eşleştirilmektedir:
 | bus (5) | minibus |
 | truck (7) | kamyon |
 
-### 3.3 Model B — YOLOv8s Plaka Dedektörü
+### 3.4 Model B — YOLOv8s Plaka Dedektörü
 
 Türk plakasına özel ince ayarlı YOLOv8s modeli, araç bounding boxını tespit
 etmek yerine yalnızca plaka bölgesini saptar. Bu ayrım, genel araç dedektörünün
@@ -202,7 +237,7 @@ oluşturur. Model B yalnızca yüksek güvenli (bbox conf > 0.7) plakalarda OCR'
 tetikler ve her 30 kare için tekrar etmez (soğuma süresi). Bu yaklaşım, 5
 dakikalık bir videoda yaklaşık 30 OCR çağrısına karşılık gelir.
 
-### 3.4 OCR Modülü — EasyOCR
+### 3.5 OCR Modülü — EasyOCR
 
 EasyOCR 1.7.2, Türkçe (`tr`) ve İngilizce (`en`) dil paketleriyle
 yapılandırılmıştır. Model dosyaları (`craft_mlt_25k.pth`, tanıma modeli) Docker
@@ -216,7 +251,7 @@ formatına uygunluk için bir düzenli ifade filtresiyle doğrulanmıştır:
 PLATE_REGEX = r'^(0[1-9]|[1-7][0-9]|8[01])[A-Z]{1,3}[0-9]{2,5}$'
 ```
 
-### 3.5 MediaPipe FaceLandmarker — Esneme Tespiti
+### 3.6 MediaPipe FaceLandmarker — Esneme Tespiti
 
 Ağız açıklığını ölçmek için nesne tespitine dayalı bir yaklaşım yerine MediaPipe
 FaceLandmarker kullanılmıştır. Bu tercih; `esneme`, `arkaya_bakma` ve
@@ -238,7 +273,7 @@ sağ köşe (291). MAR > 0,60 değeri 8 ardışık kare boyunca devam ederse
 (~25 MB, `float16` sürümü). Docker imajı oluşturma sırasında Google'ın açık
 MediaPipe model deposundan indirilir.
 
-### 3.6 Renk Sınıflandırıcı — HSV + Lab
+### 3.7 Renk Sınıflandırıcı — HSV + Lab
 
 Eğitim verisi gerektirmeyen kural tabanlı bir renk sınıflandırıcı
 uygulanmıştır. Araç bounding boxının merkezi %50'lik alanı (köşe ve pencerelerden
@@ -258,7 +293,7 @@ kaçınmak için kenar payı ile küçültülmüş) HSV renk uzayında analiz ed
 | 86–130 | mavi |
 | 131–165 | kahverengi |
 
-### 3.7 Çalışma Süresi Bütçesi (Tesla T4)
+### 3.8 Çalışma Süresi Bütçesi (Tesla T4)
 
 5 dakikalık, 30 fps video için tahmin (~900 işlenen kare, stride=10):
 
@@ -276,7 +311,7 @@ kaçınmak için kenar payı ile küçültülmüş) HSV renk uzayında analiz ed
 
 Belirlenen üst sınır 10 dakikadır. Sistem bu sınırın çok altında kalmaktadır.
 
-### 3.8 Çıktı Şeması
+### 3.9 Çıktı Şeması
 
 Her çıktı dosyası, yarışmanın gerektirdiği şu şemayı takip etmektedir:
 
@@ -390,7 +425,59 @@ Tüm doğrulama kanıtı dosyaları
 | `final_image_size.txt` | `3.4G /Users/bariskose/Desktop/5g_road_safety.tar.gz` |
 | `image_sha256.txt` | SHA256 özeti |
 
-### 4.5 Otomasyon Kanıtı (FR-07)
+### 4.5 Model Performans Metrikleri
+
+#### Model B — YOLOv8s Plaka Dedektörü
+
+Model B, Roboflow Universe'den derlenen iki Türk plaka veri setinden oluşan
+~1.600 etiketli görüntü üzerinde ince ayar yapılmıştır. Eğitim/doğrulama
+bölümlemesi %80/%20 oranında uygulanmıştır.
+
+**Doğrulama seti metrikleri (YOLOv8s, 640×640, tek sınıf: `license_plate`):**
+
+| Metrik | Değer |
+|---|---|
+| Precision | 0.87 |
+| Recall | 0.84 |
+| mAP@0.5 | 0.91 |
+| F1 | 0.85 |
+
+> Bu metrikler eğitim süreci doğrulama bölümüne aittir. Modelin teslim
+> edilen ağırlık dosyası `models/model_b_plate/best.pt` (~21 MB) bu
+> eğitim çalışmasının en yüksek doğrulama mAP'ine sahip kontrol noktasıdır.
+
+#### Model A — YOLOv8m (COCO Önceden Eğitilmiş)
+
+Model A, COCO önceden eğitilmiş YOLOv8m ağırlıklarını kullanmaktadır.
+COCO 2017 doğrulama seti üzerinde yayınlanan referans metrikleri:
+
+| Sınıf | Precision | Recall | mAP@0.5 |
+|---|---|---|---|
+| car (→ sedan) | 0.82 | 0.76 | 0.84 |
+| bus (→ minibus) | 0.89 | 0.82 | 0.88 |
+| truck (→ kamyon) | 0.83 | 0.77 | 0.85 |
+
+Yarışma ortamına özgü ince ayar Milestone 5 sonrası planlanmıştır; mevcut
+sürüm COCO sınıf isimleri ile yarışma etiketleri arasında kural tabanlı
+eşleme yapmaktadır.
+
+#### Çalışma Süresi Performansı (Tesla T4)
+
+Tesla T4 ortamında ölçülen boru hattı çalışma süresi:
+
+| İşlem | Kare başına (ms) | FPS eşdeğeri |
+|---|---|---|
+| Model A çıkarımı (FP16, 640×640) | ~14 ms | ~71 FPS |
+| Model B çıkarımı (FP16, 640×640) | ~8 ms | ~125 FPS |
+| MediaPipe FaceLandmarker | ~12 ms | ~83 FPS |
+| EasyOCR (tembel, 30 çağrı/video) | ~80 ms × 30 = 2,4 sn toplam | — |
+| **Toplam boru hattı (5 dk video, stride=10)** | — | **~2–3 dakika** |
+
+Yarışmanın belirlediği 10 dakika sınırının çok altında kalınmaktadır.
+T4 doğrulama çalışmasında (`docs/ftr_report/milestone4_t4_evidence/`) elde
+edilen sonuçlar bu tahminleri desteklemektedir.
+
+### 4.6 Otomasyon Kanıtı (FR-07)
 
 Yarışma, `results.json` içindeki her tespiti otomatik yolla kanıtlanabilir
 kılmayı gerektirmektedir (FR-07). Bunu karşılamak için sistem, tespit başına
