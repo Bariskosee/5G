@@ -17,10 +17,13 @@ from src.color.hsv_lab import classify_color
 from src.detection.model_a import ModelADetector
 from src.detection.plate_detector import PlateDetector, crop_plate, select_best_detection
 from src.landmark.face import FaceLandmarker
+from src.landmark.head_pose import HeadPoseDetector
 from src.landmark.mouth import EsnemeDetector
 from src.ocr.plate_reader import PlateReader
 from src.output.result_builder import build_result, write_results_json
 from src.output.schema import PLATE_FALLBACK
+from src.roi.driver_proximity import DriverProximityChecker
+from src.roi.seat_assignment import SeatAssigner
 from src.utils.plate_normalizer import choose_best_plate
 from src.utils.video_reader import get_video_id, iter_video_frames
 
@@ -28,6 +31,16 @@ DEFAULT_INPUT = "/app/data/input/video.mp4"
 DEFAULT_OUTPUT = "/app/data/output/results.json"
 DEFAULT_PLATE_MODEL = "/app/models/model_b_plate/best.pt"
 DEFAULT_MEDIAPIPE_MODEL = "/app/models/mediapipe/face_landmarker.task"
+
+# COCO class name → (competition label, kategori)
+_DRIVER_OBJ_MAP: dict[str, tuple[str, str]] = {
+    "cell phone": ("telefonla_konusma", "sofor_eylemi"),
+    "bottle": ("su_icme", "sofor_eylemi"),
+    "laptop": ("bilgisayar", "nesneler"),
+}
+
+# Driver seat ROI (normalized; LHD Turkey vehicle — driver on the left)
+_DRIVER_ROI = {"x_min": 0.20, "y_min": 0.10, "x_max": 0.75, "y_max": 0.85}
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +97,7 @@ def run(args: argparse.Namespace) -> int:
     vehicle_type_votes: list[tuple[str, float]] = []
     color_votes: list[tuple[str, float]] = []
     events: list[dict[str, Any]] = []
+    seen_seats: set[str] = set()
     sampled_frames = 0
     detected_plates = 0
 
@@ -101,6 +115,16 @@ def run(args: argparse.Namespace) -> int:
     vehicle_detector = ModelADetector(model_path=None, confidence=0.45, device="auto")
     landmarker = FaceLandmarker(model_path=args.mediapipe_model)
     esneme_detector = EsnemeDetector(mar_threshold=0.60, min_duration_frames=8)
+    head_pose_detector = HeadPoseDetector(
+        yaw_back_threshold=75.0,
+        arkaya_min_frames=4,
+        yaw_oscillation_threshold=30.0,
+        window_frames=18,
+        min_oscillations=2,
+        cooldown_seconds=3.0,
+    )
+    proximity_checker = DriverProximityChecker(_DRIVER_ROI)
+    seat_assigner = SeatAssigner()
 
     try:
         for frame_index, time_seconds, frame in iter_video_frames(
@@ -109,35 +133,84 @@ def run(args: argparse.Namespace) -> int:
             max_frames=args.max_frames,
         ):
             sampled_frames += 1
+            fh, fw = frame.shape[:2]
             try:
-                # Plate detection + OCR
-                detections = plate_detector.detect(frame)
-                best_plate = select_best_detection(detections)
+                # --- Model A: full detection pass ---
+                detections = vehicle_detector.detect_all(frame)
+
+                # Vehicle type vote
+                vehicle_type_votes.append((detections.vehicle_type, detections.vehicle_conf))
+
+                # Color — use real vehicle bbox when available
+                if detections.vehicle_bbox:
+                    bbox_for_color = list(detections.vehicle_bbox)
+                else:
+                    bbox_for_color = [
+                        int(fw * 0.05), int(fh * 0.25),
+                        int(fw * 0.95), int(fh * 0.95),
+                    ]
+                clr, clr_conf = classify_color(frame, bbox_for_color, sample_inset=0.25)
+                color_votes.append((clr, clr_conf))
+
+                # Driver objects: phone → telefonla_konusma, bottle → su_icme, laptop → bilgisayar
+                for coco_name, obj_conf, xyxy in detections.driver_objects:
+                    mapped = _DRIVER_OBJ_MAP.get(coco_name)
+                    if not mapped:
+                        continue
+                    label, kategori = mapped
+                    if kategori == "sofor_eylemi":
+                        if not proximity_checker.is_in_driver_roi(xyxy, fw, fh):
+                            continue
+                    event = {
+                        "zaman_saniye": round(time_seconds, 2),
+                        "kategori": kategori,
+                        "etiket": label,
+                        "confidence_score": round(min(0.95, obj_conf), 2),
+                    }
+                    events.append(event)
+                    logger.info(
+                        "[t=%.2fs] %s/%s conf=%.2f bbox=%s",
+                        time_seconds, kategori, label, obj_conf, list(xyxy),
+                    )
+
+                # Passengers: person bboxes → seat labels
+                new_seat_events = seat_assigner.assign(
+                    [bbox for bbox, _ in detections.person_bboxes],
+                    fw, fh, time_seconds, seen_seats, _DRIVER_ROI,
+                )
+                for ev in new_seat_events:
+                    seen_seats.add(ev["etiket"])
+                    events.append(ev)
+
+                # --- Plate detection + OCR ---
+                plate_detections = plate_detector.detect(frame)
+                best_plate = select_best_detection(plate_detections)
                 if best_plate is not None:
                     detected_plates += 1
                     plate_crop = crop_plate(frame, best_plate)
                     for raw_text, ocr_conf in reader.read_plate(plate_crop):
                         plate_candidates.append((raw_text, best_plate.confidence * ocr_conf))
 
-                # Vehicle type (COCO YOLOv8m)
-                vtype, vconf = vehicle_detector.detect_vehicle_type(frame)
-                vehicle_type_votes.append((vtype, vconf))
-
-                # Color — sample lower half of frame as vehicle proxy
-                fh, fw = frame.shape[:2]
-                vehicle_region = [int(fw * 0.05), int(fh * 0.25), int(fw * 0.95), int(fh * 0.95)]
-                clr, clr_conf = classify_color(frame, vehicle_region, sample_inset=0.10)
-                color_votes.append((clr, clr_conf))
-
-                # Face landmarks → esneme
+                # --- Face landmarks ---
                 face_result = landmarker.detect(frame)
-                event = esneme_detector.update(face_result, time_seconds)
-                if event is not None:
-                    events.append(event)
+
+                # Esneme
+                esneme_ev = esneme_detector.update(face_result, time_seconds)
+                if esneme_ev is not None:
+                    events.append(esneme_ev)
                     logger.info(
                         "[t=%.2fs] sofor_eylemi/esneme conf=%.2f",
-                        event["zaman_saniye"],
-                        event["confidence_score"],
+                        esneme_ev["zaman_saniye"],
+                        esneme_ev["confidence_score"],
+                    )
+
+                # Head pose: arkaya_bakma + etrafa_bakinma
+                head_events = head_pose_detector.update(face_result, time_seconds)
+                for ev in head_events:
+                    events.append(ev)
+                    logger.info(
+                        "[t=%.2fs] sofor_eylemi/%s conf=%.2f",
+                        ev["zaman_saniye"], ev["etiket"], ev["confidence_score"],
                     )
 
             except Exception as exc:
