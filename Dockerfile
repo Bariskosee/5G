@@ -34,10 +34,23 @@ RUN sed '/^torch==/d;/^torchvision==/d' /app/requirements.txt > /tmp/requirement
     && python3 -m pip install --no-cache-dir -r /tmp/requirements-no-torch.txt
 
 # Pre-download EasyOCR model files at build time.
-# Runtime has no internet, so OCR checkpoints must be baked into the image.
-# Turkish license plates use ASCII A-Z/0-9, and OCR filtering already uses an ASCII allowlist.
-RUN mkdir -p /root/.EasyOCR && \
-    python3 -c "import easyocr; easyocr.Reader(['en'], gpu=False, model_storage_directory='/root/.EasyOCR', verbose=True)"
+# Runtime has no internet. Turkish plates need both 'tr' and 'en' language packs.
+# Use /app/easyocr_models to avoid default-path double-slash bug in EasyOCR 1.7.x.
+RUN mkdir -p /app/easyocr_models && \
+    python3 -c "import easyocr; easyocr.Reader(['tr', 'en'], gpu=False, model_storage_directory='/app/easyocr_models', verbose=True)"
+
+# Pre-download MediaPipe FaceLandmarker model at build time (no internet at runtime).
+RUN mkdir -p /app/models/mediapipe && \
+    python3 -c "\
+import urllib.request; \
+urllib.request.urlretrieve(\
+'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', \
+'/app/models/mediapipe/face_landmarker.task'); \
+print('face_landmarker.task downloaded')"
+
+# Pre-download YOLOv8m COCO weights for vehicle type detection.
+# File is saved to CWD (/app) so it is found at runtime without internet.
+RUN python3 -c "from ultralytics import YOLO; YOLO('yolov8m.pt'); print('yolov8m.pt ready')"
 
 COPY main.py /app/main.py
 COPY src/ /app/src/

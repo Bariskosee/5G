@@ -22,7 +22,7 @@ class PlateReader:
 
     def __init__(
         self,
-        languages: Sequence[str] = ("en",),
+        languages: Sequence[str] = ("tr", "en"),
         use_gpu: bool = True,
         enabled: bool = True,
     ) -> None:
@@ -41,7 +41,7 @@ class PlateReader:
                 list(languages),
                 gpu=use_gpu,
                 download_enabled=False,
-                model_storage_directory="/root/.EasyOCR",
+                model_storage_directory="/app/easyocr_models",
                 verbose=False,
             )
             self.available = True
