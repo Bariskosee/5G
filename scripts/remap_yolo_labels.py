@@ -32,6 +32,7 @@ TARGET_MODEL_CONFIGS = {
     "model_b": REPO_ROOT / "configs" / "model_b_classes.yaml",
     "model_a_unified": REPO_ROOT / "configs" / "model_a_classes.yaml",
     "model_b_plate": REPO_ROOT / "configs" / "model_b_classes.yaml",
+    "model_a_vehicle_types": REPO_ROOT / "configs" / "model_a_vehicle_type_classes.yaml",
 }
 
 

@@ -1,17 +1,16 @@
-# Template for remapping vehicle-type datasets into Model A classes.
-target_model: model_a_unified
+# Roboflow "Vehicle Classification V2.v3i.yolov8" → Model A vehicle-type classes.
+# Keys must exactly match source data.yaml class names (case-sensitive, spaces included).
+target_model: model_a_vehicle_types
 
 source_to_target:
-  sedan: sedan
-  car: sedan
-  suv: suv
-  sport_utility_vehicle: suv
-  hatchback: hatchback
-  pickup: pickup
-  pickup_truck: pickup
-  minibus: minibus
-  van: panelvan
-  panelvan: panelvan
-  panel_van: panelvan
-  truck: kamyon
-  kamyon: kamyon
+  Sedan: sedan
+  SUV: suv
+  Hatchback: hatchback
+  Pickup: pickup
+  "Pickup- Utility": pickup
+  Bus: minibus
+  "Bus- Small": minibus
+  Van: panelvan
+  "Box Truck": kamyon
+  "Truck- 2-Axle": kamyon
+  "Truck- Multi-Axle": kamyon
