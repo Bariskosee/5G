@@ -1,0 +1,11 @@
+# Standalone 7-class config for vehicle-type-only training.
+# Class IDs match the vehicle-type block in model_a_classes.yaml (positions 0-6).
+nc: 7
+names:
+  - sedan
+  - suv
+  - hatchback
+  - pickup
+  - minibus
+  - panelvan
+  - kamyon

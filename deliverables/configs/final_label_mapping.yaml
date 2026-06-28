@@ -1,0 +1,120 @@
+# Final Label Mapping
+# -------------------
+# Maps Model A class names to the EXACT competition JSON schema.
+# Competition requires: ASCII, lowercase, no Turkish characters.
+# A wrong key or label = automatic 0 in scoring. Do not deviate.
+#
+# Some YOLO classes (phone, cigarette, drink) ALSO require an ROI
+# proximity check (driver seat region) BEFORE producing a sofor_eylemi
+# detection. See thresholds.yaml for ROI parameters.
+
+# -----------------------------------------------------------------
+# Vehicle type — goes into arac_bilgisi.tip (NOT into tespitler)
+# -----------------------------------------------------------------
+vehicle_type_classes:
+  - sedan
+  - suv
+  - hatchback
+  - pickup
+  - minibus
+  - panelvan
+  - kamyon
+
+# -----------------------------------------------------------------
+# Driver behavior — kategori: sofor_eylemi
+# YOLO-based classes need ROI + proximity check before emitting
+# -----------------------------------------------------------------
+model_to_json:
+
+  phone:
+    kategori: sofor_eylemi
+    etiket: telefonla_konusma
+    requires_roi: driver_seat
+    requires_proximity_to: [face, hand]   # bbox near driver face/hand
+
+  cigarette:
+    kategori: sofor_eylemi
+    etiket: sigara_icme
+    requires_roi: driver_seat
+    requires_proximity_to: [mouth, hand]
+
+  drink:
+    kategori: sofor_eylemi
+    etiket: su_icme
+    requires_roi: driver_seat
+    requires_proximity_to: [mouth, hand]
+
+  no_seatbelt:
+    kategori: sofor_eylemi
+    etiket: emniyet_kemeri_ihlali
+    requires_roi: driver_seat
+    requires_proximity_to: null    # detection alone is sufficient
+
+  teknocan:
+    kategori: nesneler
+    etiket: teknocan
+    requires_roi: null
+    requires_proximity_to: null
+
+  laptop:
+    kategori: nesneler
+    etiket: bilgisayar
+    requires_roi: null
+    requires_proximity_to: null
+
+# -----------------------------------------------------------------
+# Behaviors solved WITHOUT YOLO (MediaPipe / tracking / rule-based)
+# These are produced by separate modules, NOT from model_to_json.
+# -----------------------------------------------------------------
+landmark_based_labels:
+  - etiket: esneme
+    kategori: sofor_eylemi
+    source: mediapipe_mouth_aspect_ratio
+  - etiket: arkaya_bakma
+    kategori: sofor_eylemi
+    source: mediapipe_head_yaw
+  - etiket: etrafa_bakinma
+    kategori: sofor_eylemi
+    source: mediapipe_head_yaw_temporal
+
+tracking_based_labels:
+  - etiket: slalom
+    kategori: sofor_eylemi
+    source: vehicle_bbox_temporal_zigzag
+
+# -----------------------------------------------------------------
+# Passengers — kategori: yolcular
+# Produced from YOLO person detections + ROI assignment (NOT mapping)
+# -----------------------------------------------------------------
+passenger_labels:
+  - on_koltuk
+  - arka_koltuk_1
+  - arka_koltuk_2
+
+# -----------------------------------------------------------------
+# Vehicle color — written into arac_bilgisi.renk via HSV+Lab pipeline
+# -----------------------------------------------------------------
+vehicle_color_classes:
+  - beyaz
+  - siyah
+  - gri
+  - kirmizi
+  - mavi
+  - sari
+  - yesil
+  - turuncu
+  - kahverengi
+
+# -----------------------------------------------------------------
+# Confidence score formula for arac_bilgisi.confidence_score
+# -----------------------------------------------------------------
+arac_confidence_formula:
+  method: weighted_average
+  weights:
+    tip: 0.40
+    plaka: 0.40
+    renk: 0.20
+  fallback_if_missing:
+    # If a component is missing (e.g. plate not read), redistribute
+    # its weight proportionally to the remaining components.
+    redistribute: true

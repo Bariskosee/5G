@@ -1,0 +1,12 @@
+nc: 7
+names:
+- sedan
+- suv
+- hatchback
+- pickup
+- minibus
+- panelvan
+- kamyon
+train: images/train
+val: images/valid
+test: images/test

@@ -1,0 +1,97 @@
+# Runtime Thresholds & Parameters
+# All values are STARTING POINTS. Tune on validation set before final submission.
+
+# -----------------------------------------------------------------
+# Detection confidence thresholds (YOLO)
+# -----------------------------------------------------------------
+detection:
+  model_a_conf_threshold: 0.45      # Generic YOLOv8m detections
+  model_a_iou_threshold: 0.50       # NMS IoU
+  model_b_conf_threshold: 0.40      # Plate detector (smaller objects, lower threshold)
+  model_b_iou_threshold: 0.45
+
+  # Per-class confidence overrides (rare classes may need lower threshold)
+  per_class_conf:
+    teknocan: 0.35
+    minibus: 0.40
+    panelvan: 0.40
+
+# -----------------------------------------------------------------
+# OCR (EasyOCR)
+# -----------------------------------------------------------------
+ocr:
+  min_ocr_confidence: 0.50
+  languages: ["tr", "en"]
+  # Run OCR only when plate bbox confidence > this AND lazy_ocr cooldown OK
+  trigger_plate_conf_threshold: 0.70
+
+# -----------------------------------------------------------------
+# Frame sampling (10 minute / Tesla T4 constraint)
+# -----------------------------------------------------------------
+runtime:
+  frame_sample_every_n: 5            # Process 1 in 5 frames (~6 fps from 30 fps)
+  max_frames_per_video: 5000         # Hard cap as safety net
+  ocr_cooldown_frames: 30            # Don't re-OCR same plate within N frames
+
+# -----------------------------------------------------------------
+# Driver seat ROI (camera-relative)
+# Coordinates are NORMALIZED (0.0 to 1.0) — assume RHS-of-frame driver
+# for Turkey LHD vehicles. ROI is the rough region where the driver's
+# upper body should appear in the in-cabin camera view.
+# -----------------------------------------------------------------
+driver_seat_roi:
+  # Tune these on real competition footage during validation
+  x_min: 0.20
+  y_min: 0.10
+  x_max: 0.75
+  y_max: 0.85
+  # Proximity check: a detected object (phone/cigarette/drink) bbox center
+  # must be within this fraction of the frame diagonal from face/hand landmark
+  proximity_max_distance_norm: 0.15
+
+# -----------------------------------------------------------------
+# MediaPipe / head pose (esneme, arkaya_bakma, etrafa_bakinma)
+# -----------------------------------------------------------------
+landmark:
+  esneme:
+    mouth_aspect_ratio_threshold: 0.60   # MAR > 0.60 sustained
+    min_duration_frames: 8               # Sustained over ~1.3 sec at 6 fps
+
+  arkaya_bakma:
+    yaw_threshold_deg: 75                # Head yaw > 75 deg from forward
+    min_duration_frames: 4
+
+  etrafa_bakinma:
+    yaw_oscillation_threshold_deg: 30    # L/R yaw oscillation amplitude
+    window_frames: 18                    # ~3 sec window
+    min_oscillations: 2                  # At least 2 L<->R swings
+
+# -----------------------------------------------------------------
+# Slalom (vehicle tracking)
+# -----------------------------------------------------------------
+slalom:
+  bbox_lateral_oscillation_threshold_norm: 0.10   # Normalized x-center swing
+  window_frames: 30                               # ~5 sec window
+  min_oscillations: 2
+
+# -----------------------------------------------------------------
+# Color analysis
+# -----------------------------------------------------------------
+color:
+  # Sample from center 50% of vehicle bbox to avoid windows/wheels
+  sample_region_inset: 0.25
+  # If HSV saturation < this, fall back to Lab analysis (white/gray/black)
+  hsv_low_saturation_threshold: 30
+  # Lab fallback brightness bins
+  lab_white_min: 200
+  lab_black_max: 60
+
+# -----------------------------------------------------------------
+# Aggregation across frames -> single arac_bilgisi
+# -----------------------------------------------------------------
+aggregation:
+  # For each field, take the mode (most frequent) across all sampled
+  # frames, weighted by per-frame confidence.
+  vehicle_type_method: weighted_mode
+  color_method: weighted_mode
+  plate_method: highest_conf_valid_regex   # pick highest-confidence plate that matches Turkish regex
